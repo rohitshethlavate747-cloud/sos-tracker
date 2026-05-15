@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SOS Safety Tracker</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #1a1a2e;
+      color: white;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: #e74c3c;
+      padding: 15px 20px;
+      text-align: center;
+    }
+
+    .header h1 { font-size: 22px; }
+    .header p  { font-size: 12px; opacity: 0.8; margin-top: 4px; }
+
+    .status-box {
+      background: #16213e;
+      margin: 15px;
+      padding: 15px;
+      border-radius: 10px;
+      border-left: 4px solid #e74c3c;
+    }
+
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+
+    .status-row span:first-child { color: #aaa; }
+    .status-row span:last-child  { font-weight: bold; }
+
+    .sos-active {
+      background: #e74c3c;
+      padding: 3px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      animation: blink 1s infinite;
+    }
+
+    .sos-safe {
+      background: #2ecc71;
+      padding: 3px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+
+    #map {
+      margin: 0 15px 15px 15px;
+      height: 400px;
+      border-radius: 10px;
+      border: 2px solid #e74c3c;
+    }
+
+    .btn {
+      display: block;
+      margin: 0 15px 15px 15px;
+      padding: 13px;
+      background: #e74c3c;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      width: calc(100% - 30px);
+      font-weight: bold;
+    }
+
+    .footer {
+      text-align: center;
+      font-size: 12px;
+      color: #555;
+      padding-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>🚨 SOS Safety Tracker</h1>
+    <p>Human Safety Monitoring System</p>
+  </div>
+
+  <div class="status-box">
+    <div class="status-row">
+      <span>Status:</span>
+      <span id="sos-status">Loading...</span>
+    </div>
+    <div class="status-row">
+      <span>Latitude:</span>
+      <span id="lat-val">--</span>
+    </div>
+    <div class="status-row">
+      <span>Longitude:</span>
+      <span id="lng-val">--</span>
+    </div>
+    <div class="status-row">
+      <span>Last Alert:</span>
+      <span id="time-val">--</span>
+    </div>
+  </div>
+
+  <div id="map"></div>
+
+  <button class="btn" onclick="fetchData()">
+    🔄 Refresh Location
+  </button>
+
+  <div class="footer" id="footer">
+    Auto refresh every 10 seconds
+  </div>
+
+  <script>
+    // YAHAN APNA URL DAALO
+    var SCRIPT_URL = "YOUR_GOOGLE_APPS_SCRIPT_URL";
+
+    var map, marker;
+
+    function initMap() {
+      map = new google.maps.Map(document.getElementById("map"), {
+        zoom: 15,
+        center: { lat: 16.705, lng: 74.243 },
+        mapTypeId: "roadmap"
+      });
+    }
+
+    function updateMap(lat, lng) {
+      var pos = { lat: lat, lng: lng };
+      if (marker) {
+        marker.setPosition(pos);
+      } else {
+        marker = new google.maps.Marker({
+          position: pos,
+          map: map,
+          title: "SOS Location",
+          icon: "http://maps.google.com/mapfiles/ms/icons/red-dot.png"
+        });
+      }
+      map.setCenter(pos);
+    }
+
+    function fetchData() {
+      fetch(SCRIPT_URL + "?action=get")
+        .then(r => r.json())
+        .then(data => {
+          if (data.status === "empty") {
+            document.getElementById("sos-status").innerHTML =
+              '<span class="sos-safe">No Alert Yet</span>';
+            return;
+          }
+
+          var lat = parseFloat(data.lat);
+          var lng = parseFloat(data.lng);
+
+          document.getElementById("lat-val").textContent =
+            lat.toFixed(6);
+          document.getElementById("lng-val").textContent =
+            lng.toFixed(6);
+          document.getElementById("time-val").textContent =
+            data.time;
+
+          if (data.status === "SOS") {
+            document.getElementById("sos-status").innerHTML =
+              '<span class="sos-active">🚨 SOS ACTIVE</span>';
+          } else {
+            document.getElementById("sos-status").innerHTML =
+              '<span class="sos-safe">✅ Safe</span>';
+          }
+
+          updateMap(lat, lng);
+
+          document.getElementById("footer").textContent =
+            "Last updated: " + new Date().toLocaleTimeString();
+        })
+        .catch(err => {
+          console.log("Error:", err);
+        });
+    }
+
+    fetchData();
+    setInterval(fetchData, 10000);
+  </script>
+
+  <script
+    src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&callback=initMap"
+    async defer>
+  </script>
+
+</body>
+</html>
